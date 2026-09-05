@@ -189,6 +189,16 @@ python -m pytest
 
 See [PROBLEM.md](PROBLEM.md) for the full list. Short version: binary labels only, small defects, controlled lighting, non-commercial license, image-level scores can be right for the wrong pixels.
 
+## Future work
+
+These are real next steps. They are not in this repo because each one is a different project, not a small extension of what is already here.
+
+**Cloud deploy.** The Docker image already runs the same inspector anywhere. Hosting it would add cloud-provider setup, networking, secrets, and cost — DevOps work, not a stronger ML result. This is cloud-deployable; a paid portfolio host would not add much signal beyond what Docker already showed.
+
+**Multi-class defect typing.** KSDD2 does not label scratch vs spot vs other morphology. Typing defects would mean new labels, a retrain, and per-class metrics in place of the binary hold/continue decision. That reopens the threshold story this repo spent Phase 3 locking down.
+
+**Pixel-level training (segmentation).** Official masks exist, but this project uses them for audit and error analysis only, not as a training target. A segmenter (for example U-Net) is a different architecture, loss, and metric (IoU, not defective-class recall). That is a separate research project.
+
 ## Citation
 
 If you use KSDD2, cite Božič, Tabernik, and Skočaj, *Computers in Industry*, 2021.
