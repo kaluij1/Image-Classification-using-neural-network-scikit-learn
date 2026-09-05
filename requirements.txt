@@ -1,4 +1,11 @@
-# Phase 1 — data audit / exploration only
+# Phase 1 — data audit / exploration
 numpy>=2.0
 pillow>=11.0
 matplotlib>=3.9
+
+# Phase 2 — PyTorch baseline
+# On machines without NVIDIA, install CPU wheels first:
+#   py -3.13 -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+torch>=2.6
+torchvision>=0.21
+scikit-learn>=1.6

@@ -1,0 +1,16 @@
+{
+  "seed": 42,
+  "val_fraction": 0.2,
+  "input_width": 224,
+  "input_height": 448,
+  "batch_size": 24,
+  "epochs": 10,
+  "freeze_epochs": 3,
+  "lr_head": 0.0003,
+  "lr_backbone": 0.0001,
+  "weight_decay": 0.0001,
+  "num_workers": 0,
+  "backbone": "mobilenet_v3_small",
+  "pretrained": true,
+  "default_threshold": 0.5
+}

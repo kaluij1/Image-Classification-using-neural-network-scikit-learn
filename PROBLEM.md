@@ -56,6 +56,8 @@ Rationale: recall is the quantity that moves with missed defects. Accuracy is th
 
 Do not invent a numeric recall target (for example “95%”) without a validation curve that justifies it.
 
+Phase 2 operating point: on validation, maximize defective recall among thresholds with precision at least 0.5. That prefers fewer missed defects without claiming a recall quota. Max-F1 is a reference only.
+
 ## Secondary metrics
 
 Report these only after they have been computed:

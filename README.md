@@ -11,11 +11,11 @@ Decision problem, costs, and metrics: **[PROBLEM.md](PROBLEM.md)**.
 | Status | Scope |
 |---|---|
 | Done | Dataset choice, problem definition, local data audit |
-| In progress | Phase 2 PyTorch baseline (MobileNetV3-Small, transfer learning) |
+| Done | Phase 2 PyTorch baseline (MobileNetV3-Small, transfer learning) |
 | Not started | Error analysis / Grad-CAM, FastAPI, Docker, CI |
 | Not this project | Cloud deploy, multi-class defect typing, pixel-level training |
 
-Do not quote test metrics unless `reports/baseline/metrics.md` exists and was produced by a completed `scripts/train_baseline.py` run.
+Computed baseline numbers: `reports/baseline/metrics.md`. Do not quote test metrics from anywhere else.
 
 ## Dataset
 
@@ -104,7 +104,8 @@ Design choices for this baseline:
 - Portrait letterbox (224×448) instead of a square resize that would crush height
 - No random crop (can drop a 23-pixel defect)
 - Class imbalance handled with `BCEWithLogitsLoss` `pos_weight` from the **training fold only**
-- Checkpoint on validation PR-AUC; operating threshold from validation F1 (recall tie-break)
+- Checkpoint on validation PR-AUC
+- Operating threshold from validation: max defective recall among cutoffs with precision ≥ 0.5 (FN cost more than FP). Max-F1 is kept as a reference only.
 
 ## Limitations
 
