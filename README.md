@@ -1,87 +1,115 @@
-# Problem definition — KolektorSDD2 surface inspection
+# Manufacturing surface inspection (KolektorSDD2)
 
-This document defines the decision problem for the project. It is not a results report. Counts that refer to the local copy were computed from the official ViCoS zip (see `reports/exploration/audit_summary.md`).
+Production-oriented image classification for industrial surface defects: **defective** vs **ok**.
 
-## Problem
+This repo is a portfolio project (ML + mechanical engineering). It is **not** a plant-ready inspection system. A real line would still need calibration, drift monitoring, a review workflow, and a documented cost ratio.
 
-Build an image-level classifier that, given a single inspection photo of a Kolektor production item, predicts whether the item shows a visible surface defect.
+Decision problem, costs, and metrics: **[PROBLEM.md](PROBLEM.md)**.
 
-This is a **production-style** quality-inspection problem, not a claim of a plant-ready system. The industrial decision we are approximating is the first gate on a line: **hold the part for review** versus **let it continue**.
+## What is implemented vs planned
 
-Dataset: [Kolektor Surface-Defect Dataset 2 (KSDD2)](https://www.vicos.si/resources/kolektorsdd2/), released by ViCoS Lab (University of Ljubljana) with imagery and annotations from Kolektor Group d.o.o. License: [CC BY-NC-SA 4.0](http://creativecommons.org/licenses/by-nc-sa/4.0/) (non-commercial; contact the authors for commercial use).
+| Status | Scope |
+|---|---|
+| Done | Dataset choice, problem definition, local data audit |
+| In progress | Phase 2 PyTorch baseline (MobileNetV3-Small, transfer learning) |
+| Not started | Error analysis / Grad-CAM, FastAPI, Docker, CI |
+| Not this project | Cloud deploy, multi-class defect typing, pixel-level training |
 
-Citation:
+Do not quote test metrics unless `reports/baseline/metrics.md` exists and was produced by a completed `scripts/train_baseline.py` run.
 
-> Božič, J., Tabernik, D., and Skočaj, D. “Mixed supervision for surface-defect detection: from weakly to fully supervised learning.” *Computers in Industry*, 2021.
+## Dataset
 
-## What constitutes a defect
+[KolektorSDD2](https://www.vicos.si/resources/kolektorsdd2/) — ViCoS Lab / Kolektor Group. **CC BY-NC-SA 4.0** (non-commercial).
 
-A **defective** image is one whose official ground-truth mask contains at least one nonzero pixel. An **ok** image has an empty (all-zero) mask.
+Local audit of the official zip (canonical IDs only):
 
-The dataset authors describe the marked regions as visible surface defects on a production item: scratches, minor spots, and larger surface imperfections. Defect *types are not labeled*. This project therefore does **not** claim to distinguish scratch vs spot vs other morphology.
+| Split | N | Defective | OK |
+|---|---:|---:|---:|
+| Official train | 2,331 | 246 | 2,085 |
+| Official test | 1,004 | 110 | 894 |
+| All | 3,335 | 356 | 2,979 |
 
-We do not invent additional defect taxonomy, severity grades, or functional-failure labels. Pixel masks exist and will be used later for analysis, not as the Phase 2 training target.
+Images are RGB, roughly 229×637, variable size. A part is **defective** if its `_GT.png` mask has any nonzero pixel. Two official `10301 (copy)` files are ignored (byte-identical to `10301`).
 
-## Operational meaning of a positive prediction
+Images are **not** in git. Download them locally.
 
-**Positive = defective.**
+## Evaluation protocol
 
-A positive model output means: treat the item as suspect. In this project that is an **image-level flag** (hold / send to human review). It is not an automatic scrap command, not a bounding box, and not a process-control interlock.
+- **Positive** = defective = hold for review. False negatives cost more than false positives.
+- **Primary metric:** defective-class recall on official test, at a threshold chosen on validation only.
+- **Secondary:** precision, F1, confusion matrix, PR-AUC. Accuracy is reported and treated as misleading (~10.7% defective).
+- Official **test is frozen**. Validation is a stratified 20% of official train (seed 42).
 
-A negative output means: the image is consistent with the ok class under the chosen threshold.
+Implemented split (from `reports/baseline/split_manifest.json`): train 1,864 (197/1,667), val 467 (49/418), test 1,004 (110/894).
 
-## False-positive cost
+## Repository layout
 
-A false positive holds or re-inspects a good part.
+```
+PROBLEM.md                 Decision problem (not results)
+src/ksdd2_inventory.py     Discover images/masks, derive labels
+src/ksdd2_audit.py         Phase 1 audit
+src/ksdd2_splits.py        Train/val/test roles, leakage checks
+src/ksdd2_dataset.py       Image-level PyTorch dataset
+src/ksdd2_transforms.py    Letterbox 224×448, light train aug
+src/ksdd2_model.py         MobileNetV3-Small, one logit
+src/ksdd2_train.py         Train/eval loops
+src/ksdd2_metrics.py       Threshold selection + metrics
+src/ksdd2_report.py        Baseline figures and markdown
+scripts/download_ksdd2.py
+scripts/run_data_audit.py
+scripts/train_baseline.py
+notebooks/01_data_exploration.ipynb
+notebooks/02_baseline_review.ipynb
+reports/exploration/       Computed audit
+reports/baseline/          Split + training outputs (when the run finishes)
+data/raw/                  Local dataset (gitignored)
+```
 
-Typical costs in this setting: extra labor, line delay, and (if the hold is treated as a reject) scrap of a conforming item. That is wasteful, but the part itself is not defective.
+## Setup
 
-For this project, false positives are the **cheaper** error.
+Python 3.13, from the repo root:
 
-## False-negative cost
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
 
-A false negative lets a defective part continue downstream or ship.
+CPU-only PyTorch (if the default wheel wants CUDA):
 
-Typical costs: rework later, assembly failure, warranty, customer return, and — depending on the end use of the component — possible safety or reliability exposure. The official pages describe Kolektor production items; they do not name a specific SKU in the dataset card, so we do not invent one.
+```powershell
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+```
 
-For this project, false negatives are the **more expensive** error. The operating point should prefer missing fewer defects over maximizing raw accuracy.
+## Data and audit
 
-## Primary evaluation metric
+```powershell
+python scripts/download_ksdd2.py
+python scripts/run_data_audit.py
+```
 
-**Recall of the defective class** on the official test set, at a threshold chosen on a validation split carved from official train only.
+Then open `notebooks/01_data_exploration.ipynb`. Audit numbers: `reports/exploration/audit_summary.md`.
 
-Rationale: recall is the quantity that moves with missed defects. Accuracy is the wrong primary metric at ~10.7% prevalence (a constant “ok” predictor is already ~89% accurate).
+## Baseline training
 
-We will not set a numeric recall target until Phase 2/4, when validation curves exist. Inventing “95% recall” now would be theater.
+```powershell
+python scripts/train_baseline.py
+```
 
-## Secondary metrics
+Writes `reports/baseline/` (split manifest, history, metrics, plots, `checkpoints/best.pt`). Review with `notebooks/02_baseline_review.ipynb` only after `metrics.json` is present.
 
-Computed later, not claimed now:
+Design choices for this baseline:
 
-- Precision of the defective class at the same operating point
-- F1 of the defective class at that point
-- Confusion matrix
-- Average precision (PR-AUC) for the defective class — threshold-free model comparison
-- ROC-AUC as supporting context only (prevalence-insensitive; not the decision metric)
-- Accuracy, reported and treated as misleading
+- Transfer learning, not training from scratch
+- Portrait letterbox (224×448) instead of a square resize that would crush height
+- No random crop (can drop a 23-pixel defect)
+- Class imbalance handled with `BCEWithLogitsLoss` `pos_weight` from the **training fold only**
+- Checkpoint on validation PR-AUC; operating threshold from validation F1 (recall tie-break)
 
-No metric will be quoted in later phases unless it has actually been computed.
+## Limitations
 
-## Important limitations
+See [PROBLEM.md](PROBLEM.md) for the full list. Short version: binary labels only, small defects, controlled lighting, non-commercial license, image-level scores can be right for the wrong pixels.
 
-- **Binary only.** Types, severity, and functional impact are unlabeled.
-- **Classification discards location.** The native annotation is a pixel mask. An image-level model can be right for the wrong pixels.
-- **Small defects.** On this copy, defective masks range from 23 to 43,869 foreground pixels (area fraction 0.017%–30.2%, median 1.56%). Eight defects cover less than 0.1% of the image. Aggressive resizing can erase the signal.
-- **Variable geometry.** All 3,335 images are RGB, but there are 601 distinct `(width, height)` pairs (width 184–241, height 597–665). A single input size is a design choice, not a property of the data.
-- **Official zip messiness.** The release includes `train/10301 (copy).png` and `train/10301_GT (copy).png`, byte-identical to `10301`. They are excluded from the inventory. Canonical counts then match the published 3,335 / 246+2085 / 110+894 split exactly.
-- **Near-duplicate screen is coarse.** SHA-256 found no duplicates among canonical IDs. An 8×8 average hash produced 23 collision groups (47 images): 9 groups span train/test (all ok/ok in those groups) and 1 group mixes labels. That is expected for similar parts under a 64-bit hash, not proof of leakage. A Hamming 1–4 expansion produced 17,992 pairs and is discarded as too coarse.
-- **Controlled capture.** Lighting and framing are industrial but not a survey of plant variation (new SKUs, dirt, lighting drift).
-- **License.** CC BY-NC-SA 4.0. Fine for a portfolio; not a commercial deployment dataset without permission.
-- **Not production-ready.** A real line would also need calibration, drift monitoring, human-in-the-loop review design, traceability, and a documented cost ratio — none of which this dataset provides.
+## Citation
 
-## Split policy (for Phase 2)
-
-- Freeze the official **test** split (1,004 images).
-- Carve **validation** only from official **train** (2,331 images), stratified by defective/ok.
-- Do not use test images, test masks, or test-derived statistics for training or threshold selection.
-- Ignore the two `*(copy)*` files.
+If you use KSDD2, cite Božič, Tabernik, and Skočaj, *Computers in Industry*, 2021.
