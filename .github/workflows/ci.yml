@@ -1,0 +1,41 @@
+# Cheap, honest checks. This job does not download the dataset, load a
+# checkpoint, retrain, retune the threshold, score official test, or
+# build a container image.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements-dev.txt
+
+      - name: Syntax
+        run: python -m compileall -q src scripts tests
+
+      - name: Imports (no checkpoint, no dataset)
+        env:
+          PYTHONPATH: src
+        run: python -c "import ksdd2_transforms, ksdd2_metrics, ksdd2_api, ksdd2_serve"
+
+      - name: Pytest
+        run: python -m pytest

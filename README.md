@@ -15,7 +15,7 @@ Decision problem, costs, and metrics: **[PROBLEM.md](PROBLEM.md)**.
 | Done | Phase 3 error analysis of that checkpoint (FN/FP galleries, mask area, Grad-CAM) |
 | Done | Phase 4 local FastAPI (locked 46/49 threshold, hold-for-review) |
 | Done | Phase 5 Docker image for that API (checkpoint mounted, not baked in) |
-| Not started | CI |
+| Done | Phase 6 GitHub Actions CI (syntax, imports, pytest; no dataset or weights) |
 | Not this project | Cloud deploy, multi-class defect typing, pixel-level training |
 
 Computed baseline numbers: `reports/baseline/metrics.md`. Do not quote test metrics from anywhere else. Phase 3 counts: `reports/error_analysis/error_report.md`.
@@ -69,6 +69,9 @@ scripts/train_baseline.py
 scripts/run_error_analysis.py
 scripts/run_threshold_tradeoff.py
 scripts/serve_api.py
+requirements-dev.txt
+tests/
+.github/workflows/ci.yml
 Dockerfile
 docker-compose.yml
 notebooks/01_data_exploration.ipynb
@@ -171,7 +174,16 @@ docker compose up --build
 
 Then `http://127.0.0.1:8000/` as above. Requires `reports/baseline/checkpoints/best.pt` on the host. This is still not a plant-ready deploy.
 
-CI is not in this phase.
+## CI
+
+GitHub Actions on push and pull request to `main`. It installs CPU wheels from `requirements.txt` / `requirements-dev.txt` and runs a small suite: letterbox geometry, the 46/49 threshold rule on synthetic scores, the hold-for-review API contract with a mocked inspector, and a check that the serving path reads the cutoff from `reports/baseline/metrics.json`.
+
+CI does **not** download KSDD2, load the checkpoint, retrain, retune the threshold, score official test, or build the Docker image.
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
 
 ## Limitations
 

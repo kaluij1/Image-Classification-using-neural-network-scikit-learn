@@ -10,6 +10,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .ipynb_checkpoints/
+.pytest_cache/
 
 # Local audit / training outputs
 /reports/exploration/*.png

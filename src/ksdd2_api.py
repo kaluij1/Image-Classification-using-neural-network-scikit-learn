@@ -1,7 +1,7 @@
 """Local FastAPI app for the locked image-level hold flag.
 
 Positive = hold for review. Not a scrap command, not a box, not an
-interlock. CI is a later phase.
+interlock. The serving path reads the cutoff from metrics.json.
 """
 
 from __future__ import annotations

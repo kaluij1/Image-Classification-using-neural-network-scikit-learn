@@ -1,0 +1,4 @@
+# Phase 6 — local / CI tests. Not installed in the Docker image.
+-r requirements.txt
+pytest>=8.0
+httpx>=0.27
