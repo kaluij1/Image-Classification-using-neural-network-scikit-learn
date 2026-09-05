@@ -28,7 +28,7 @@ We do not invent additional defect taxonomy, severity grades, or functional-fail
 
 **Positive = defective.**
 
-A positive model output means: treat the item as suspect. In this project that is an **image-level flag** (hold / send to human review). It is not an automatic scrap command, not a bounding box, and not a process-control interlock.
+A positive model output means: treat the item as suspect. In this project that is an **image-level flag** (hold / send to human review). The Phase 4 API exposes that same flag. It is not an automatic scrap command, not a bounding box, and not a process-control interlock.
 
 A negative output means: the image is consistent with the ok class under the chosen threshold.
 

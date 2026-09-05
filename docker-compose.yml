@@ -1,0 +1,10 @@
+services:
+  inspector:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./reports/baseline/checkpoints/best.pt:/app/reports/baseline/checkpoints/best.pt:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

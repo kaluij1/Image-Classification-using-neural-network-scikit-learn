@@ -13,7 +13,9 @@ Decision problem, costs, and metrics: **[PROBLEM.md](PROBLEM.md)**.
 | Done | Dataset choice, problem definition, local data audit |
 | Done | Phase 2 PyTorch baseline (MobileNetV3-Small, transfer learning) |
 | Done | Phase 3 error analysis of that checkpoint (FN/FP galleries, mask area, Grad-CAM) |
-| Not started | FastAPI, Docker, CI |
+| Done | Phase 4 local FastAPI (locked 46/49 threshold, hold-for-review) |
+| Done | Phase 5 Docker image for that API (checkpoint mounted, not baked in) |
+| Not started | CI |
 | Not this project | Cloud deploy, multi-class defect typing, pixel-level training |
 
 Computed baseline numbers: `reports/baseline/metrics.md`. Do not quote test metrics from anywhere else. Phase 3 counts: `reports/error_analysis/error_report.md`.
@@ -59,10 +61,16 @@ src/ksdd2_report.py        Baseline figures and markdown
 src/ksdd2_errors.py        FN/FP join + mask size/location
 src/ksdd2_gradcam.py       Grad-CAM on the Phase 2 backbone
 src/ksdd2_analysis.py      Error galleries and markdown
+src/ksdd2_serve.py         Frozen-checkpoint inference
+src/ksdd2_api.py           FastAPI hold-for-review service
 scripts/download_ksdd2.py
 scripts/run_data_audit.py
 scripts/train_baseline.py
 scripts/run_error_analysis.py
+scripts/run_threshold_tradeoff.py
+scripts/serve_api.py
+Dockerfile
+docker-compose.yml
 notebooks/01_data_exploration.ipynb
 notebooks/02_baseline_review.ipynb
 notebooks/03_error_analysis.ipynb
@@ -137,6 +145,33 @@ python scripts/run_threshold_tradeoff.py
 ```
 
 Table: `reports/error_analysis/threshold_tradeoff.md`.
+
+## Local API
+
+Serves the frozen checkpoint at the locked 46/49 threshold. Positive = hold for review, not scrap. Needs `reports/baseline/checkpoints/best.pt` (gitignored) and `reports/baseline/metrics.json`.
+
+```powershell
+python -m pip install fastapi uvicorn python-multipart
+python scripts/serve_api.py
+```
+
+Open `http://127.0.0.1:8000/`. JSON: `GET /health`, `GET /meta`, `POST /predict` (multipart file). Score one image without a server:
+
+```powershell
+python scripts/serve_api.py --check data\raw\KolektorSDD2\test\20228.png
+```
+
+## Docker
+
+Same locked inspector. The image has code + `metrics.json`. It does **not** include `best.pt` or the dataset. Mount the local checkpoint (gitignored):
+
+```powershell
+docker compose up --build
+```
+
+Then `http://127.0.0.1:8000/` as above. Requires `reports/baseline/checkpoints/best.pt` on the host. This is still not a plant-ready deploy.
+
+CI is not in this phase.
 
 ## Limitations
 

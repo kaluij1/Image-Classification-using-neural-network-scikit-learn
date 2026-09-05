@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KSDD2 inspection — hold for review</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: Georgia, serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+    h1 { font-size: 1.4rem; }
+    .note { color: #bbb; font-size: 0.95rem; }
+    button, input[type=file] { font: inherit; }
+    #out { margin-top: 1.25rem; padding: 1rem; border: 1px solid #444; }
+    .hold { background: #3a1a1a; }
+    .continue { background: #1a2a1a; }
+    .hidden { display: none; }
+    code { font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Surface inspection — image-level hold</h1>
+  <p class="note">
+    Positive = <strong>hold for review</strong>. This is not a scrap command.
+    Threshold is the locked val-only 46/49 cutoff from
+    <code>reports/baseline/metrics.md</code>. Portfolio demo, not plant-ready.
+  </p>
+  <form id="form">
+    <p><input type="file" name="file" accept="image/png,image/jpeg" required></p>
+    <p><button type="submit">Score image</button></p>
+  </form>
+  <div id="out" class="hidden"></div>
+  <script>
+    const form = document.getElementById("form");
+    const out = document.getElementById("out");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const response = await fetch("/predict", { method: "POST", body: data });
+      const body = await response.json();
+      if (!response.ok) {
+        out.className = "";
+        out.textContent = body.detail || "Request failed.";
+        return;
+      }
+      out.className = body.positive ? "hold" : "continue";
+      out.innerHTML =
+        "<p><strong>Decision: " + body.decision.replaceAll("_", " ") + "</strong></p>" +
+        "<p>Label: " + body.label + "</p>" +
+        "<p>Score P(defective) = " + body.score.toFixed(4) +
+        " (threshold " + body.threshold.toFixed(4) + ")</p>" +
+        "<p>Image " + body.width + "×" + body.height + "</p>";
+    });
+  </script>
+</body>
+</html>
