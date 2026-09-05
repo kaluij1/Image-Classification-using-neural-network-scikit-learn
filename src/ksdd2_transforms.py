@@ -13,6 +13,8 @@ fixture is treated as meaningful.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from PIL import Image
 from torchvision import transforms
 
@@ -23,6 +25,41 @@ INPUT_HEIGHT = 448
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 _PAD_RGB = tuple(int(round(c * 255)) for c in IMAGENET_MEAN)
+
+
+@dataclass(frozen=True)
+class LetterboxGeom:
+    src_w: int
+    src_h: int
+    dst_w: int
+    dst_h: int
+    scale: float
+    new_w: int
+    new_h: int
+    pad_x: int
+    pad_y: int
+
+
+def letterbox_geometry(
+    src_w: int,
+    src_h: int,
+    dst_w: int = INPUT_WIDTH,
+    dst_h: int = INPUT_HEIGHT,
+) -> LetterboxGeom:
+    scale = min(dst_w / src_w, dst_h / src_h)
+    new_w = max(1, int(round(src_w * scale)))
+    new_h = max(1, int(round(src_h * scale)))
+    return LetterboxGeom(
+        src_w=src_w,
+        src_h=src_h,
+        dst_w=dst_w,
+        dst_h=dst_h,
+        scale=scale,
+        new_w=new_w,
+        new_h=new_h,
+        pad_x=(dst_w - new_w) // 2,
+        pad_y=(dst_h - new_h) // 2,
+    )
 
 
 class Letterbox:
@@ -41,12 +78,10 @@ class Letterbox:
     def __call__(self, image: Image.Image) -> Image.Image:
         image = image.convert("RGB")
         src_w, src_h = image.size
-        scale = min(self.width / src_w, self.height / src_h)
-        new_w = max(1, int(round(src_w * scale)))
-        new_h = max(1, int(round(src_h * scale)))
-        resized = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        geom = letterbox_geometry(src_w, src_h, self.width, self.height)
+        resized = image.resize((geom.new_w, geom.new_h), Image.Resampling.BILINEAR)
         canvas = Image.new("RGB", (self.width, self.height), self.fill)
-        canvas.paste(resized, ((self.width - new_w) // 2, (self.height - new_h) // 2))
+        canvas.paste(resized, (geom.pad_x, geom.pad_y))
         return canvas
 
 

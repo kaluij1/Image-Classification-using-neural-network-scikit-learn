@@ -1,6 +1,6 @@
 # Phase 2 — PyTorch baseline
 
-Generated (UTC): 2026-09-05T06:59:00.815945+00:00
+Generated (UTC): 2026-09-05T19:39:43.006450+00:00
 
 Image-level defective vs ok. Positive = defective (hold for review).
 Official test was frozen. Validation was carved from official train only.
@@ -28,18 +28,18 @@ No train/val/test ID overlap. Copy files `10301 (copy)` are outside the inventor
 
 ## Operating point
 
-- Rule: max_defective_recall_on_val_subject_to_precision>=0.5; tie_break_higher_precision
-- Threshold chosen on **val only**: 0.472725
-- Val at that threshold: precision=0.6818, recall=0.9184, F1=0.7826
+- Rule: highest_threshold_on_val_with_defective_recall>=0.938776; tie_break_higher_precision
+- Threshold chosen on **val only**: 0.173938
+- Val at that threshold: precision=0.3566, recall=0.9388, F1=0.5169
 - Test was scored once at this threshold after selection. Test was not used to pick it.
 
 ## Metrics at the val-chosen threshold
 
 | Split | Accuracy* | Precision (def) | Recall (def) | F1 (def) | Recall (ok) | PR-AUC (def) | ROC-AUC | TP | FP | FN | TN |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| train | 0.9399 | 0.6523 | 0.9239 | 0.7647 | 0.9418 | 0.9290 | 0.9731 | 182 | 97 | 15 | 1570 |
-| val | 0.9465 | 0.6818 | 0.9184 | 0.7826 | 0.9498 | 0.9072 | 0.9623 | 45 | 21 | 4 | 397 |
-| test | 0.9143 | 0.5698 | 0.8909 | 0.6950 | 0.9172 | 0.9042 | 0.9627 | 98 | 74 | 12 | 820 |
+| train | 0.7988 | 0.3405 | 0.9645 | 0.5033 | 0.7792 | 0.9290 | 0.9731 | 190 | 368 | 7 | 1299 |
+| val | 0.8158 | 0.3566 | 0.9388 | 0.5169 | 0.8014 | 0.9072 | 0.9623 | 46 | 83 | 3 | 335 |
+| test | 0.7878 | 0.3333 | 0.9364 | 0.4916 | 0.7696 | 0.9042 | 0.9627 | 103 | 206 | 7 | 688 |
 
 \*Accuracy is the wrong primary metric at ~10.7% prevalence.
 
@@ -53,15 +53,16 @@ No train/val/test ID overlap. Copy files `10301 (copy)` are outside the inventor
 
 ## Primary metric (as defined)
 
-- Defective-class recall on official test at the val-chosen threshold: **0.8909** (98/110 defective images).
+- Defective-class recall on official test at the val-chosen threshold: **0.9364** (103/110 defective images).
 - Threshold-free test PR-AUC (defective): **0.9042**.
 
 ## Threshold tradeoff (same checkpoint, val-only selection)
 
-False negatives cost more than false positives, so the decision threshold maximizes validation defective recall among cutoffs with precision at least 0.5 (holds are not majority false alarms). Max-F1 is a high-precision reference only. Test was not used to pick the cutoff.
+False negatives cost more than false positives, so the locked threshold is the highest validation cutoff that still catches at least 46 of 49 val defectives. The older max-recall rule with precision at least 0.5, max-F1, and the 0.5 default are references only. Test was not used to pick the cutoff.
 
 - Max-F1 reference (0.860): test **24 FN / 7 FP**, recall 0.7818, precision 0.9247
-- Chosen recall-preferring (0.473): test **12 FN / 74 FP**, recall 0.8909, precision 0.5698
+- Precision-floor reference (0.473, max val recall with precision>=0.5): test **12 FN / 74 FP**, recall 0.8909, precision 0.5698
+- Chosen recall floor 46/49 (0.174): test **7 FN / 206 FP**, recall 0.9364, precision 0.3333
 - Threshold 0.5 (untuned default): test **12 FN / 63 FP**, recall 0.8909, precision 0.6087
 
 This is an operating-point choice, not a retrain.

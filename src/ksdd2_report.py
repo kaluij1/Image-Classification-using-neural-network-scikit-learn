@@ -203,14 +203,16 @@ def write_metrics_markdown(report: dict[str, Any], dest: Path) -> None:
             "",
             "## Threshold tradeoff (same checkpoint, val-only selection)",
             "",
-            "False negatives cost more than false positives, so the decision "
-            "threshold maximizes validation defective recall among cutoffs "
-            "with precision at least 0.5 (holds are not majority false alarms). "
-            "Max-F1 is a high-precision reference only. Test was not used to pick "
-            "the cutoff.",
+            "False negatives cost more than false positives, so the locked "
+            "threshold is the highest validation cutoff that still catches "
+            "at least 46 of 49 val defectives. The older max-recall rule "
+            "with precision at least 0.5, max-F1, and the 0.5 default are "
+            "references only. Test was not used to pick the cutoff.",
             "",
         ]
     )
+    prec_ref_sel = report.get("threshold_selection_precision_floor_reference")
+    prec_ref_metrics = report.get("metrics_at_precision_floor_reference")
     f1_ref_sel = report.get("threshold_selection_f1_reference")
     f1_ref_metrics = report.get("metrics_at_f1_reference")
     if f1_ref_sel and f1_ref_metrics:
@@ -221,9 +223,18 @@ def write_metrics_markdown(report: dict[str, Any], dest: Path) -> None:
             f"recall {f1_ref_metrics['test']['recall_defective']:.4f}, "
             f"precision {f1_ref_metrics['test']['precision_defective']:.4f}"
         )
+    if prec_ref_sel and prec_ref_metrics:
+        lines.append(
+            f"- Precision-floor reference ({prec_ref_sel['threshold']:.3f}, "
+            f"max val recall with precision>=0.5): test "
+            f"**{prec_ref_metrics['test']['confusion_matrix']['fn']} FN / "
+            f"{prec_ref_metrics['test']['confusion_matrix']['fp']} FP**, "
+            f"recall {prec_ref_metrics['test']['recall_defective']:.4f}, "
+            f"precision {prec_ref_metrics['test']['precision_defective']:.4f}"
+        )
     lines.extend(
         [
-            f"- Chosen recall-preferring ({selection['threshold']:.3f}): test "
+            f"- Chosen recall floor 46/49 ({selection['threshold']:.3f}): test "
             f"**{chosen['test']['confusion_matrix']['fn']} FN / "
             f"{chosen['test']['confusion_matrix']['fp']} FP**, "
             f"recall {chosen['test']['recall_defective']:.4f}, "

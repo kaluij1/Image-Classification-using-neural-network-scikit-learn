@@ -3,12 +3,11 @@
 Primary metric (PROBLEM.md): defective-class recall on official test,
 at a threshold chosen on validation only.
 
-Operating-point rule: on validation, maximize defective recall among
-thresholds whose defective precision is at least 0.5. That prefers
-missing fewer defects (FN cost more than FP) without inventing a
-numeric recall target such as 95%. Ties go to higher precision.
-Max-F1 is still computed as a high-precision reference; it is not
-the decision threshold.
+Locked operating-point rule: on validation, the highest threshold that
+still catches at least 46 of 49 val defectives (recall >= 46/49). False
+negatives are treated as more expensive than false positives. The older
+max-recall-subject-to-precision>=0.5 rule and max-F1 are references
+only. Test must not be used to pick the cutoff.
 """
 
 from __future__ import annotations
@@ -29,7 +28,22 @@ from sklearn.metrics import (
 
 MIN_PRECISION_FOR_RECALL = 0.5
 
+# Locked integer floor on the seed-42 val split (49 defectives).
+VAL_RECALL_FLOOR_CAUGHT = 46
+VAL_RECALL_FLOOR_N = 49
+MIN_RECALL_FOR_THRESHOLD = VAL_RECALL_FLOOR_CAUGHT / VAL_RECALL_FLOOR_N
+
 POSITIVE_LABEL = 1
+
+
+def select_operating_threshold(
+    y_true: np.ndarray,
+    y_score: np.ndarray,
+) -> dict[str, Any]:
+    """Locked val-only rule: highest cutoff with recall >= 46/49."""
+    return select_threshold_recall_floor(
+        y_true, y_score, min_recall=MIN_RECALL_FOR_THRESHOLD
+    )
 
 
 def binary_metrics(
@@ -200,6 +214,55 @@ def select_threshold_max_recall(
         rule, precision, recall, thresholds, y_true, y_score, best_i
     )
     selected["min_precision"] = float(min_precision)
+    return selected
+
+
+def select_threshold_recall_floor(
+    y_true: np.ndarray,
+    y_score: np.ndarray,
+    min_recall: float,
+) -> dict[str, Any]:
+    """Highest val threshold whose defective recall is at least ``min_recall``.
+
+    That is a recall SLA on validation: meet the floor, then keep the
+    highest cutoff (fewer false positives). Tie-break: higher precision.
+    If no cutoff meets the floor, fall back to maximum val recall.
+    Test must not be passed in here.
+    """
+    y_true = np.asarray(y_true).astype(int)
+    y_score = np.asarray(y_score, dtype=np.float64)
+    precision, recall, thresholds = _pr_arrays(y_true, y_score)
+    rule = (
+        f"highest_threshold_on_val_with_defective_recall>={min_recall:g}; "
+        "tie_break_higher_precision"
+    )
+    if thresholds.size == 0:
+        return _empty_selection(rule)
+
+    feasible = np.where(recall[:-1] >= min_recall)[0]
+    if feasible.size == 0:
+        best_i = int(np.argmax(recall[:-1]))
+        selected = _selection_at(
+            f"{rule}; fallback_max_recall",
+            precision,
+            recall,
+            thresholds,
+            y_true,
+            y_score,
+            best_i,
+        )
+        selected["min_recall"] = float(min_recall)
+        selected["floor_met"] = False
+        return selected
+
+    max_threshold = float(thresholds[feasible].max())
+    tied = feasible[np.isclose(thresholds[feasible], max_threshold)]
+    best_i = int(tied[np.argmax(precision[:-1][tied])])
+    selected = _selection_at(
+        rule, precision, recall, thresholds, y_true, y_score, best_i
+    )
+    selected["min_recall"] = float(min_recall)
+    selected["floor_met"] = True
     return selected
 
 

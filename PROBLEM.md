@@ -22,7 +22,7 @@ A **defective** image is one whose official ground-truth mask contains at least 
 
 The dataset authors describe the marked regions as visible surface defects on a production item: scratches, minor spots, and larger surface imperfections. Defect *types are not labeled*. This project therefore does **not** claim to distinguish scratch vs spot vs other morphology.
 
-We do not invent additional defect taxonomy, severity grades, or functional-failure labels. Pixel masks exist and are reserved for later analysis. They are not the Phase 2 training target.
+We do not invent additional defect taxonomy, severity grades, or functional-failure labels. Pixel masks exist and are used in Phase 3 for size, location, and Grad-CAM overlap only. They are not a training target.
 
 ## Operational meaning of a positive prediction
 
@@ -56,7 +56,7 @@ Rationale: recall is the quantity that moves with missed defects. Accuracy is th
 
 Do not invent a numeric recall target (for example “95%”) without a validation curve that justifies it.
 
-Phase 2 operating point: on validation, maximize defective recall among thresholds with precision at least 0.5. That prefers fewer missed defects without claiming a recall quota. Max-F1 is a reference only.
+Locked operating point: on validation, the highest threshold that still catches at least 46 of 49 val defectives (recall ≥ 46/49). That is a recall-floor choice after a computed tradeoff: false negatives are treated as the more expensive error, so more holds of good parts are accepted. The earlier max-recall-among-precision≥0.5 rule and max-F1 are references only. Test is not used to pick the cutoff.
 
 ## Secondary metrics
 

@@ -16,6 +16,7 @@ from ksdd2_inventory import find_dataset_root, load_inventory  # noqa: E402
 from ksdd2_metrics import (  # noqa: E402
     binary_metrics,
     pr_curve_points,
+    select_operating_threshold,
     select_threshold_max_f1,
     select_threshold_max_recall,
 )
@@ -93,7 +94,10 @@ def emit_baseline_report(
         for role in ("train", "val", "test")
     }
 
-    selection = select_threshold_max_recall(
+    selection = select_operating_threshold(
+        predictions["val"]["y_true"], predictions["val"]["y_score"]
+    )
+    precision_floor_reference = select_threshold_max_recall(
         predictions["val"]["y_true"], predictions["val"]["y_score"]
     )
     f1_reference = select_threshold_max_f1(
@@ -106,6 +110,12 @@ def emit_baseline_report(
     }
     metrics_default = {
         role: binary_metrics(pred["y_true"], pred["y_score"], config.default_threshold)
+        for role, pred in predictions.items()
+    }
+    metrics_precision_floor_reference = {
+        role: binary_metrics(
+            pred["y_true"], pred["y_score"], precision_floor_reference["threshold"]
+        )
         for role, pred in predictions.items()
     }
     metrics_f1_reference = {
@@ -127,9 +137,11 @@ def emit_baseline_report(
         "best_val_pr_auc": result["best_val_pr_auc"],
         "best_checkpoint": result["best_checkpoint"],
         "threshold_selection": selection,
+        "threshold_selection_precision_floor_reference": precision_floor_reference,
         "threshold_selection_f1_reference": f1_reference,
         "metrics_at_chosen_threshold": metrics_chosen,
         "metrics_at_0.5": metrics_default,
+        "metrics_at_precision_floor_reference": metrics_precision_floor_reference,
         "metrics_at_f1_reference": metrics_f1_reference,
         "history": result["history"],
     }

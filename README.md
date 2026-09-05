@@ -12,10 +12,11 @@ Decision problem, costs, and metrics: **[PROBLEM.md](PROBLEM.md)**.
 |---|---|
 | Done | Dataset choice, problem definition, local data audit |
 | Done | Phase 2 PyTorch baseline (MobileNetV3-Small, transfer learning) |
-| Not started | Error analysis / Grad-CAM, FastAPI, Docker, CI |
+| Done | Phase 3 error analysis of that checkpoint (FN/FP galleries, mask area, Grad-CAM) |
+| Not started | FastAPI, Docker, CI |
 | Not this project | Cloud deploy, multi-class defect typing, pixel-level training |
 
-Computed baseline numbers: `reports/baseline/metrics.md`. Do not quote test metrics from anywhere else.
+Computed baseline numbers: `reports/baseline/metrics.md`. Do not quote test metrics from anywhere else. Phase 3 counts: `reports/error_analysis/error_report.md`.
 
 ## Dataset
 
@@ -55,13 +56,19 @@ src/ksdd2_model.py         MobileNetV3-Small, one logit
 src/ksdd2_train.py         Train/eval loops
 src/ksdd2_metrics.py       Threshold selection + metrics
 src/ksdd2_report.py        Baseline figures and markdown
+src/ksdd2_errors.py        FN/FP join + mask size/location
+src/ksdd2_gradcam.py       Grad-CAM on the Phase 2 backbone
+src/ksdd2_analysis.py      Error galleries and markdown
 scripts/download_ksdd2.py
 scripts/run_data_audit.py
 scripts/train_baseline.py
+scripts/run_error_analysis.py
 notebooks/01_data_exploration.ipynb
 notebooks/02_baseline_review.ipynb
+notebooks/03_error_analysis.ipynb
 reports/exploration/       Computed audit
 reports/baseline/          Split + training outputs (when the run finishes)
+reports/error_analysis/    Phase 3 report (figures/ is gitignored)
 data/raw/                  Local dataset (gitignored)
 ```
 
@@ -105,7 +112,31 @@ Design choices for this baseline:
 - No random crop (can drop a 23-pixel defect)
 - Class imbalance handled with `BCEWithLogitsLoss` `pos_weight` from the **training fold only**
 - Checkpoint on validation PR-AUC
-- Operating threshold from validation: max defective recall among cutoffs with precision ≥ 0.5 (FN cost more than FP). Max-F1 is kept as a reference only.
+- Operating threshold from validation: highest cutoff that still catches 46/49 val defectives (FN cost more than FP). The older precision≥0.5 rule and max-F1 are references only.
+
+Replay metrics without training:
+
+```powershell
+python scripts/train_baseline.py --eval-only
+```
+
+## Error analysis
+
+Uses the frozen Phase 2 checkpoint and the val-chosen threshold. Official masks are for size, location, and Grad-CAM overlap only — not a training target, and test is not used to retune.
+
+```powershell
+python scripts/run_error_analysis.py
+```
+
+Writes `reports/error_analysis/error_report.md`. Review with `notebooks/03_error_analysis.ipynb`.
+
+Val-only threshold comparison (the locked row is 46/49; nothing is wired into an API yet):
+
+```powershell
+python scripts/run_threshold_tradeoff.py
+```
+
+Table: `reports/error_analysis/threshold_tradeoff.md`.
 
 ## Limitations
 

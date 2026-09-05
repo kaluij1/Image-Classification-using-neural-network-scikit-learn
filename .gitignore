@@ -15,6 +15,7 @@ __pycache__/
 /reports/exploration/*.png
 /reports/baseline/*.png
 /reports/baseline/checkpoints/
+/reports/error_analysis/figures/
 *.pt
 *.pth
 .DS_Store
