@@ -1,0 +1,17 @@
+# Dataset (do not commit; licensed CC BY-NC-SA 4.0)
+/data/raw/
+/data/interim/
+/data/processed/
+*.zip
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Local audit outputs
+/reports/exploration/*.png
+.DS_Store
+Thumbs.db

@@ -1,0 +1,4 @@
+# Phase 1 — data audit / exploration only
+numpy>=2.0
+pillow>=11.0
+matplotlib>=3.9
